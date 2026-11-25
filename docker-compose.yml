@@ -1,0 +1,94 @@
+# Java4Shell (CVE-2026-114938) — Vulnerable Test Environment
+# ─────────────────────────────────────────────────────────────
+# Spins up two containers for black-box testing:
+#   - vuln-app:   A simple Spring Boot app on JDK 21 (x86_64, unpatched)
+#                 that accepts Base64 input at multiple endpoints.
+#   - proxy:      Nginx reverse proxy for realistic WAF-free traffic.
+#
+# Usage:
+#   docker compose up -d vuln-app
+#   python3 java4shell_scanner.py http://localhost:8088
+#   python3 java4shell_exploit.py http://localhost:8088 --profile vulnapp -O creds --warmup 50
+#
+# Requirements:
+#   - Docker Engine ≥ 24.0 with Compose v2
+#   - x86_64 host with AVX-512 VBMI support (Intel Skylake-X+, Ice Lake+)
+#     Verify: grep -m1 avx512_vbmi /proc/cpuinfo
+#
+# Note: This environment is intentionally vulnerable.
+# Run only on isolated lab networks. Never expose to the internet.
+
+services:
+
+  # ── Vulnerable Java application ──────────────────────────────────────────────
+  vuln-app:
+    image: eclipse-temurin:21-jdk
+    container_name: java4shell-vuln-app
+    platform: linux/amd64
+    working_dir: /app
+    environment:
+      # JVM flags: enable AVX-512 intrinsics (default on affected builds),
+      # verbose GC for oracle phase observability
+      JAVA_OPTS: >-
+        -server
+        -Xms256m
+        -Xmx512m
+        -XX:+UseG1GC
+        -XX:+PrintGCDetails
+        -XX:+UnlockDiagnosticVMOptions
+        -XX:+PrintInlining
+        -Djava.security.egd=file:/dev/./urandom
+    volumes:
+      - ./docker/app:/app:ro
+    command: ["bash", "-c", "mkdir -p /tmp/build && javac -d /tmp/build /app/VulnApp.java && cd /tmp/build && java $$JAVA_OPTS VulnApp"]
+    ports:
+      - "8088:8080"
+    networks:
+      - java4shell-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ── Keycloak (SAML/OIDC, unpatched JDK 21) ───────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.4
+    container_name: java4shell-keycloak
+    platform: linux/amd64
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-mem
+      # Force Java 21 intrinsics — do NOT add -XX:-UseBASE64Intrinsics
+      JAVA_OPTS_APPEND: "-Xms128m -Xmx256m -XX:+UseG1GC"
+    command: ["start-dev", "--http-port=8081"]
+    ports:
+      - "8081:8081"
+    networks:
+      - java4shell-net
+    restart: unless-stopped
+    profiles: ["full"]    # only starts with: docker compose --profile full up
+
+  # ── Jenkins LTS (pre-patched JDK) ─────────────────────────────────────────────
+  jenkins:
+    image: jenkins/jenkins:2.452-jdk21
+    container_name: java4shell-jenkins
+    platform: linux/amd64
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC"
+    ports:
+      - "8082:8080"
+    networks:
+      - java4shell-net
+    restart: unless-stopped
+    profiles: ["full"]
+
+networks:
+  java4shell-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Environment / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test artifacts & loot
+loot/
+loot.xml
+calibration.json
+report.json
+report.md
+report.xml
+mass_report.json
+exploitation_report.json
+*.log
+
+# Sensitive / internal scratch
+instruções.txt
+PROJECT_HANDOVER.md

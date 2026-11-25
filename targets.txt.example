@@ -1,0 +1,33 @@
+# Java4Shell Mass Scanner — targets.txt.example
+# Format: one URL per line. Lines starting with # are comments.
+# URLs without http(s):// scheme are auto-prefixed with https://
+#
+# Usage:
+#   python java4shell_mass_scan.py targets.txt --target-threads 20 --output mass_report.json
+#   python java4shell_mass_scan.py targets.txt --output mass_report.md   (Markdown)
+#   python java4shell_mass_scan.py targets.txt --output mass_report.xml  (JUnit XML)
+
+# ── Local docker test environment ─────────────────────────────────────────────
+http://localhost:8080
+http://localhost:8081
+http://localhost:8082
+
+# ── Keycloak instances ────────────────────────────────────────────────────────
+# https://keycloak.internal.corp.example.com
+# https://auth.example.com:8443
+
+# ── Atlassian (Jira / Confluence) ─────────────────────────────────────────────
+# https://jira.example.com
+# https://confluence.example.com:8090
+
+# ── Jenkins ───────────────────────────────────────────────────────────────────
+# https://jenkins.example.com
+# https://ci.example.com:8080
+
+# ── JFrog Artifactory ─────────────────────────────────────────────────────────
+# https://artifactory.example.com
+# https://repo.example.com:8081
+
+# ── Spring Boot / generic Java apps ──────────────────────────────────────────
+# https://api.example.com
+# https://backend.example.com:8443
